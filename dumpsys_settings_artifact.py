@@ -1,11 +1,36 @@
 # MVT module for settings on bugreports
 # by K+Lab 2025
 
-from mvt.android.artifacts.settings import Settings as SettingsArtifact
+from mvt.android.artifacts.artifact import AndroidArtifact
+from mvt.android.artifacts.settings import ANDROID_DANGEROUS_SETTINGS
 
-class DumpsysSettingsArtifact(SettingsArtifact):
+
+ANDROID_DANGEROUS_APPS = ['com.android.shell']
+
+class DumpsysSettingsArtifact(AndroidArtifact):
     def check_indicators(self) -> None:
-        super().check_indicators()
+        for namespace, settings in self.results.items():
+            for key, values in settings.items():
+                for danger in ANDROID_DANGEROUS_SETTINGS:
+                    # Check if one of the dangerous settings is using an unsafe
+                    # value (different than the one specified).
+                    if danger["key"] == key and danger["safe_value"] != values["value"]:
+                        self.log.warning(
+                            'Found suspicious "%s" setting "%s = %s" (%s)',
+                            namespace,
+                            key,
+                            values["value"],
+                            danger["description"],
+                        )
+                    if values['pkg'] in ANDROID_DANGEROUS_APPS:
+                        self.log.warning(
+                            'Found suspicious "%s" setting "%s = %s" (was modified by %s)',
+                            namespace,
+                            key,
+                            values['value'],
+                            values['pkg'],
+                        )
+                        break
 
     def parse(self, content: str) -> None:
         self.results = {}
@@ -39,7 +64,11 @@ class DumpsysSettingsArtifact(SettingsArtifact):
                         setting_dict = self._parse_setting(cur_setting)
                         key = setting_dict["name"]
                         value = setting_dict["value"]
-                        self.results[namespace][key] = value
+                        pkg = setting_dict["pkg"]
+                        self.results[namespace][key] = {
+                            "value": value,
+                            "pkg": pkg
+                            }
                         cur_setting = line
                     else:
                         cur_setting += "\n" + line
@@ -47,7 +76,10 @@ class DumpsysSettingsArtifact(SettingsArtifact):
                 setting_dict = self._parse_setting(cur_setting)
                 key = setting_dict["name"]
                 value = setting_dict["value"]
-                self.results[namespace][key] = value
+                self.results[namespace][key] = {
+                            "value": value,
+                            "pkg": pkg
+                            }
 
 
     def _parse_setting(self, setting):

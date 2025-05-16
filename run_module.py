@@ -5,18 +5,8 @@ import sys
 
 from mvt.android.cmd_check_bugreport import CmdAndroidCheckBugreport
 from mvt.common.utils import init_logging, set_verbose_logging
-from mvt.android.artifacts.settings import ANDROID_DANGEROUS_SETTINGS
-
 
 from bugreport_settings import Settings
-
-my_ioc = {
-    "description":"setting used to expoit CVE-2024-31317",
-    "key":"hidden_api_blacklist_exemptions",
-    "safe_value":"!"
-        }
-
-ANDROID_DANGEROUS_SETTINGS.append(my_ioc)
 
 
 if __name__ == "__main__":
